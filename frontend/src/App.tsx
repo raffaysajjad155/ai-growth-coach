@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import './App.css';
 
 const API_BASE = 'http://localhost:8000';
@@ -27,8 +28,18 @@ interface Comment {
   created_at: string;
 }
 
+interface ReportData {
+  status: string;
+  total_submissions?: number;
+  category_breakdown?: Record<string, number>;
+  timeline?: { date: string; category: string }[];
+  improvement_score?: number;
+  weak_categories?: string[];
+  recommended_resources?: string[];
+}
+
 function App() {
-  const [tab, setTab] = useState<'submit' | 'dashboard' | 'community'>('submit');
+  const [tab, setTab] = useState<'submit' | 'dashboard' | 'community' | 'report'>('submit');
   const [code, setCode] = useState('');
   const [language, setLanguage] = useState('python');
   const [memberId, setMemberId] = useState('demo-user');
@@ -45,6 +56,9 @@ function App() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [votedMap, setVotedMap] = useState<Record<string, 'up' | 'down'>>({});
+
+  const [report, setReport] = useState<ReportData | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
 
   const lineCount = Math.max(code.split('\n').length, 8);
 
@@ -142,11 +156,24 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    if (tab === 'dashboard') loadDashboard();
-    if (tab === 'community') loadCommunity();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
+  const loadReport = async () => {
+    setReportLoading(true);
+    try {
+      const response = await axios.get(`${API_BASE}/report/${memberId}`);
+      setReport(response.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
+useEffect(() => {
+  if (tab === 'dashboard') loadDashboard();
+  if (tab === 'community') loadCommunity();
+  if (tab === 'report') loadReport();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [tab, memberId]);
 
   return (
     <div className="shell">
@@ -161,6 +188,7 @@ function App() {
         <button className={`tab-btn ${tab === 'submit' ? 'active' : ''}`} onClick={() => setTab('submit')}>submit</button>
         <button className={`tab-btn ${tab === 'dashboard' ? 'active' : ''}`} onClick={() => setTab('dashboard')}>dashboard</button>
         <button className={`tab-btn ${tab === 'community' ? 'active' : ''}`} onClick={() => setTab('community')}>community</button>
+        <button className={`tab-btn ${tab === 'report' ? 'active' : ''}`} onClick={() => setTab('report')}>report</button>
       </div>
 
       <div className="config-row">
@@ -294,6 +322,56 @@ function App() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {tab === 'report' && (
+        <div className="dashboard">
+          {reportLoading && <p className="dim-text">generating report...</p>}
+          {!reportLoading && report?.status === 'no_data' && (
+            <p className="dim-text">no submissions yet for "{memberId}".</p>
+          )}
+          {!reportLoading && report?.status === 'done' && (
+            <>
+              <div className="stat-row">
+                <div className="stat-box">
+                  <div className="stat-label">total submissions</div>
+                  <div className="stat-value">{report.total_submissions}</div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-label">improvement score</div>
+                  <div className="stat-value">{report.improvement_score}%</div>
+                </div>
+              </div>
+
+              <h3 className="section-heading">mistake frequency by category</h3>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={Object.entries(report.category_breakdown || {}).map(([category, count]) => ({ category, count }))}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#232b38" />
+                  <XAxis dataKey="category" tick={{ fill: '#7c8797', fontSize: 11 }} />
+                  <YAxis tick={{ fill: '#7c8797', fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip contentStyle={{ background: '#10151d', border: '1px solid #232b38' }} />
+                  <Bar dataKey="count" fill="#5eead4" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+
+              <h3 className="section-heading">submissions over time</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={(report.timeline || []).slice().reverse().map((t, i) => ({ index: i + 1, date: new Date(t.date).toLocaleDateString() }))}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#232b38" />
+                  <XAxis dataKey="date" tick={{ fill: '#7c8797', fontSize: 10 }} />
+                  <YAxis tick={{ fill: '#7c8797', fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip contentStyle={{ background: '#10151d', border: '1px solid #232b38' }} />
+                  <Line type="monotone" dataKey="index" stroke="#a78bfa" strokeWidth={2} dot={{ fill: '#a78bfa' }} />
+                </LineChart>
+              </ResponsiveContainer>
+
+              <h3 className="section-heading">recommended resources</h3>
+              <ul className="resource-list">
+                {report.recommended_resources?.map((r, i) => <li key={i}>{r}</li>)}
+              </ul>
+            </>
+          )}
         </div>
       )}
     </div>

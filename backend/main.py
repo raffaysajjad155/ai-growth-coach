@@ -7,6 +7,7 @@ import requests
 import json
 import os
 from services.pattern_detector import detect_patterns
+from services.report_generator import generate_monthly_report
 
 from pathlib import Path
 load_dotenv(dotenv_path=Path(__file__).parent / ".env")
@@ -228,3 +229,11 @@ def add_vote(payload: VoteRequest):
         "vote_type": payload.vote_type,
     }).execute()
     return response.data
+
+
+
+
+
+@app.get("/report/{member_id}")
+def get_report(member_id: str):
+    return generate_monthly_report(supabase, member_id)
