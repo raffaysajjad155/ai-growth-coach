@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ValidationError
 from supabase import create_client
 from dotenv import load_dotenv
@@ -11,6 +12,14 @@ from pathlib import Path
 load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
@@ -58,7 +67,55 @@ def call_ollama(prompt: str) -> str:
     return response.json()["response"]
 
 
-def get_validated_feedback(code: str, language: str, max_retries: int = 1):
+def clean_json_text(raw: str) -> str:
+    text = raw.strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        text = text.replace("json", "", 1).strip()
+    return text
+
+
+def normalize_keys(data: dict) -> dict:
+    key_map = {
+        "what_is_wrong": ["what_is_wrong", "what's_wrong", "whats_wrong"],
+        "why_it_is_wrong": ["why_it_is_wrong", "why_it_s_wrong", "whyitiswrong", "why_its_wrong"],
+        "how_to_fix": ["how_to_fix", "howtofix"],
+        "concept_to_study": ["concept_to_study", "concepttostudy"],
+    }
+    normalized = {}
+    for target_key, variants in key_map.items():
+        for v in variants:
+            if v in data:
+                normalized[target_key] = data[v]
+                break
+    return normalized
+
+
+def clean_json_text(raw: str) -> str:
+    text = raw.strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        text = text.replace("json", "", 1).strip()
+    return text
+
+
+def normalize_keys(data: dict) -> dict:
+    key_map = {
+        "what_is_wrong": ["what_is_wrong", "what's_wrong", "whats_wrong"],
+        "why_it_is_wrong": ["why_it_is_wrong", "why_it_s_wrong", "whyitiswrong", "why_its_wrong"],
+        "how_to_fix": ["how_to_fix", "howtofix"],
+        "concept_to_study": ["concept_to_study", "concepttostudy"],
+    }
+    normalized = {}
+    for target_key, variants in key_map.items():
+        for v in variants:
+            if v in data:
+                normalized[target_key] = data[v]
+                break
+    return normalized
+
+
+def get_validated_feedback(code: str, language: str, max_retries: int = 3):
     prompt = build_json_prompt(code, language)
     last_raw = None
 
@@ -66,14 +123,15 @@ def get_validated_feedback(code: str, language: str, max_retries: int = 1):
         raw_output = call_ollama(prompt)
         last_raw = raw_output
         try:
-            data = json.loads(raw_output)
+            cleaned = clean_json_text(raw_output)
+            data = json.loads(cleaned)
+            data = normalize_keys(data)
             validated = FeedbackSchema(**data)
             return {"status": "success", "data": validated.dict()}
         except (json.JSONDecodeError, ValidationError):
             continue
 
     return {"status": "parsing_failed", "raw": last_raw}
-
 
 @app.get("/")
 def health_check():
@@ -103,3 +161,70 @@ def submit_code(payload: SubmissionRequest):
 def check_patterns(member_id: str):
     result = detect_patterns(supabase, member_id)
     return result
+
+@app.get("/submissions/{member_id}")
+def get_submissions(member_id: str):
+    response = (
+        supabase.table("submissions")
+        .select("id, language, code, feedback_json, created_at")
+        .eq("member_id", member_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    return response.data
+
+
+class CommentRequest(BaseModel):
+    submission_id: str
+    author_id: str
+    comment_text: str
+
+
+class VoteRequest(BaseModel):
+    submission_id: str
+    voter_id: str
+    vote_type: str
+
+
+@app.get("/all-submissions")
+def get_all_submissions():
+    response = (
+        supabase.table("submissions")
+        .select("id, member_id, language, code, feedback_json, created_at")
+        .order("created_at", desc=True)
+        .limit(50)
+        .execute()
+    )
+    return response.data
+
+
+@app.post("/comment")
+def add_comment(payload: CommentRequest):
+    response = supabase.table("comments").insert({
+        "submission_id": payload.submission_id,
+        "author_id": payload.author_id,
+        "comment_text": payload.comment_text,
+    }).execute()
+    return response.data
+
+
+@app.get("/comments/{submission_id}")
+def get_comments(submission_id: str):
+    response = (
+        supabase.table("comments")
+        .select("*")
+        .eq("submission_id", submission_id)
+        .order("created_at", desc=False)
+        .execute()
+    )
+    return response.data
+
+
+@app.post("/vote")
+def add_vote(payload: VoteRequest):
+    response = supabase.table("feedback_votes").insert({
+        "submission_id": payload.submission_id,
+        "voter_id": payload.voter_id,
+        "vote_type": payload.vote_type,
+    }).execute()
+    return response.data
