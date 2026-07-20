@@ -2,8 +2,8 @@ from collections import Counter
 from datetime import datetime, timezone
 
 TAXONOMY_KEYWORDS = {
-    "missing_error_handling": ["error handling", "exception", "try", "except", "catch", "crash", "division by zero"],
-    "no_input_validation": ["validation", "validate", "null", "none", "missing check", "not found"],
+    "missing_error_handling": ["error handling", "exception", "try", "except", "catch", "crash", "division by zero", "runtime error", "unexpected behavior"],
+    "no_input_validation": ["validation", "validate", "null", "none", "missing check", "not found", "invalid", "invalid input", "invalid value"],
     "outdated_syntax": ["var", "outdated", "deprecated", "let", "const", "best practice"],
     "array_bounds_error": ["out-of-bounds", "out of bounds", "index", "bounds", "array size"],
     "inefficient_loop": ["inefficient", "nested loop", "o(n", "performance", "unnecessary"],
