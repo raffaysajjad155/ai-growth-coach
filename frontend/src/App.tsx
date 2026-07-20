@@ -3,7 +3,7 @@ import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import './App.css';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = 'https://owner-organisations-curriculum-hay.trycloudflare.com';
 
 interface FeedbackData {
   what_is_wrong: string;
