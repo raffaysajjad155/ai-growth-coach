@@ -38,8 +38,14 @@ interface ReportData {
   recommended_resources?: string[];
 }
 
+interface MentorMember {
+  member_id: string;
+  last_active: string;
+  total_submissions: number;
+}
+
 function App() {
-  const [tab, setTab] = useState<'submit' | 'dashboard' | 'community' | 'report'>('submit');
+  const [tab, setTab] = useState<'submit' | 'dashboard' | 'community' | 'report' | 'mentor'>('submit');
   const [code, setCode] = useState('');
   const [language, setLanguage] = useState('python');
   const [memberId, setMemberId] = useState('demo-user');
@@ -59,6 +65,9 @@ function App() {
 
   const [report, setReport] = useState<ReportData | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
+
+  const [mentorData, setMentorData] = useState<MentorMember[]>([]);
+  const [mentorLoading, setMentorLoading] = useState(false);
 
   const lineCount = Math.max(code.split('\n').length, 8);
 
@@ -168,12 +177,25 @@ function App() {
     }
   };
 
-useEffect(() => {
-  if (tab === 'dashboard') loadDashboard();
-  if (tab === 'community') loadCommunity();
-  if (tab === 'report') loadReport();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [tab, memberId]);
+  const loadMentorDashboard = async () => {
+    setMentorLoading(true);
+    try {
+      const response = await axios.get(`${API_BASE}/mentor-dashboard`);
+      setMentorData(response.data.members);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setMentorLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === 'dashboard') loadDashboard();
+    if (tab === 'community') loadCommunity();
+    if (tab === 'report') loadReport();
+    if (tab === 'mentor') loadMentorDashboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, memberId]);
 
   return (
     <div className="shell">
@@ -189,6 +211,7 @@ useEffect(() => {
         <button className={`tab-btn ${tab === 'dashboard' ? 'active' : ''}`} onClick={() => setTab('dashboard')}>dashboard</button>
         <button className={`tab-btn ${tab === 'community' ? 'active' : ''}`} onClick={() => setTab('community')}>community</button>
         <button className={`tab-btn ${tab === 'report' ? 'active' : ''}`} onClick={() => setTab('report')}>report</button>
+        <button className={`tab-btn ${tab === 'mentor' ? 'active' : ''}`} onClick={() => setTab('mentor')}>mentor</button>
       </div>
 
       <div className="config-row">
@@ -371,6 +394,33 @@ useEffect(() => {
                 {report.recommended_resources?.map((r, i) => <li key={i}>{r}</li>)}
               </ul>
             </>
+          )}
+        </div>
+      )}
+
+      {tab === 'mentor' && (
+        <div className="dashboard">
+          {mentorLoading && <p className="dim-text">loading members...</p>}
+          {!mentorLoading && mentorData.length === 0 && <p className="dim-text">no members yet.</p>}
+          {!mentorLoading && mentorData.length > 0 && (
+            <table className="mentor-table">
+              <thead>
+                <tr>
+                  <th>member</th>
+                  <th>submissions</th>
+                  <th>last active</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mentorData.map((m) => (
+                  <tr key={m.member_id}>
+                    <td>{m.member_id}</td>
+                    <td>{m.total_submissions}</td>
+                    <td>{new Date(m.last_active).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       )}

@@ -433,3 +433,28 @@ h1.title {
   font-size: 13px;
   color: var(--text);
 }
+
+
+.mentor-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+.mentor-table th {
+  text-align: left;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.mentor-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.mentor-table tr:hover td {
+  background: var(--surface);
+}

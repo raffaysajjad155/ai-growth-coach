@@ -237,3 +237,27 @@ def add_vote(payload: VoteRequest):
 @app.get("/report/{member_id}")
 def get_report(member_id: str):
     return generate_monthly_report(supabase, member_id)
+
+
+@app.get("/mentor-dashboard")
+def mentor_dashboard():
+    response = (
+        supabase.table("submissions")
+        .select("member_id, created_at, feedback_json")
+        .order("created_at", desc=True)
+        .execute()
+    )
+    rows = response.data
+
+    members = {}
+    for row in rows:
+        mid = row["member_id"]
+        if mid not in members:
+            members[mid] = {
+                "member_id": mid,
+                "last_active": row["created_at"],
+                "total_submissions": 0,
+            }
+        members[mid]["total_submissions"] += 1
+
+    return {"members": list(members.values())}
