@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import requests
 import json
 import os
+from services.pattern_detector import detect_patterns
 
 from pathlib import Path
 load_dotenv(dotenv_path=Path(__file__).parent / ".env")
@@ -96,3 +97,9 @@ def submit_code(payload: SubmissionRequest):
         "feedback_result": result,
         "stored_row_id": insert_response.data[0]["id"] if insert_response.data else None
     }
+
+
+@app.get("/check-patterns/{member_id}")
+def check_patterns(member_id: str):
+    result = detect_patterns(supabase, member_id)
+    return result
