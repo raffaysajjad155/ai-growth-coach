@@ -1,3 +1,4 @@
+import re
 from collections import Counter
 from datetime import datetime, timezone
 
@@ -14,7 +15,8 @@ def categorize_feedback(why_it_is_wrong: str) -> str:
     text = why_it_is_wrong.lower()
     for category, keywords in TAXONOMY_KEYWORDS.items():
         for kw in keywords:
-            if kw in text:
+            pattern = r'\b' + re.escape(kw) + r'\b'
+            if re.search(pattern, text):
                 return category
     return "uncategorized"
 
