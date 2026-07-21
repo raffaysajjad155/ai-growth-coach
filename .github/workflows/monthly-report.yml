@@ -1,0 +1,14 @@
+name: Monthly Report Trigger
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'
+  workflow_dispatch:
+
+jobs:
+  trigger-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit report endpoint via tunnel
+        run: |
+          curl -f https://YOUR-TUNNEL-URL.trycloudflare.com/report/demo-user || echo "Backend unreachable - tunnel may be offline. This is a known limitation of the local-hosting approach (Option B)."
