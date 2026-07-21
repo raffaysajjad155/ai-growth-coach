@@ -189,13 +189,13 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    if (tab === 'dashboard') loadDashboard();
-    if (tab === 'community') loadCommunity();
-    if (tab === 'report') loadReport();
-    if (tab === 'mentor') loadMentorDashboard();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, memberId]);
+useEffect(() => {
+  if (tab === 'dashboard') loadDashboard();
+  if (tab === 'community') loadCommunity();
+  if (tab === 'report') loadReport();
+  if (tab === 'mentor') loadMentorDashboard();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [tab, memberId]);
 
   return (
     <div className="shell">
@@ -241,10 +241,14 @@ function App() {
           </div>
           <button className="run-btn" onClick={handleSubmit} disabled={loading}>
             {loading ? (
-              <span className="dots">
-                analyzing<span style={{ '--i': 0 } as any}>.</span><span style={{ '--i': 1 } as any}>.</span><span style={{ '--i': 2 } as any}>.</span>
-              </span>
-            ) : <>▶ run review</>}
+  <span className="dots">
+    analyzing<span style={{ '--i': 0 } as React.CSSProperties}>.</span>
+    <span style={{ '--i': 1 } as React.CSSProperties}>.</span>
+    <span style={{ '--i': 2 } as React.CSSProperties}>.</span>
+  </span>
+) : (
+  <>▶ run review</>
+)}
           </button>
           {error && <div className="error-line">✕ {error}</div>}
           {feedback && (
