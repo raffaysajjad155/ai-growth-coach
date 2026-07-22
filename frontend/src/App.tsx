@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import './App.css';
+import { supabase } from './supabaseClient';
+import AuthScreen from './AuthScreen';
 
-const API_BASE = 'https://vessels-trainer-nonprofit-transactions.trycloudflare.com';;
+const API_BASE =  'http://localhost:8000';
 
 interface FeedbackData {
   what_is_wrong: string;
@@ -45,6 +47,9 @@ interface MentorMember {
 }
 
 function App() {
+  const [session, setSession] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
   const [tab, setTab] = useState<'submit' | 'dashboard' | 'community' | 'report' | 'mentor'>('submit');
   const [code, setCode] = useState('');
   const [language, setLanguage] = useState('python');
@@ -87,7 +92,7 @@ function App() {
         setError('model returned an unparseable response — try again.');
       }
     } catch (err) {
-      setError('could not reach the backend at localhost:8000.');
+      setError('could not reach the backend.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -189,13 +194,44 @@ function App() {
     }
   };
 
-useEffect(() => {
-  if (tab === 'dashboard') loadDashboard();
-  if (tab === 'community') loadCommunity();
-  if (tab === 'report') loadReport();
-  if (tab === 'mentor') loadMentorDashboard();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [tab, memberId]);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      setMemberId(session.user.email);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    if (tab === 'dashboard') loadDashboard();
+    if (tab === 'community') loadCommunity();
+    if (tab === 'report') loadReport();
+    if (tab === 'mentor') loadMentorDashboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, memberId]);
+
+  if (authLoading) {
+    return <div className="shell"><p className="dim-text">loading...</p></div>;
+  }
+
+  if (!session) {
+    return <AuthScreen onAuthSuccess={() => {}} />;
+  }
 
   return (
     <div className="shell">
@@ -216,8 +252,12 @@ useEffect(() => {
 
       <div className="config-row">
         <div className="field">
-          <label>member_id</label>
-          <input value={memberId} onChange={(e) => setMemberId(e.target.value)} />
+          <label>logged in as</label>
+          <input value={memberId} disabled />
+        </div>
+        <div className="field">
+          <label>&nbsp;</label>
+          <button className="vote-btn" onClick={handleLogout}>log out</button>
         </div>
         {tab === 'submit' && (
           <div className="field">
@@ -241,14 +281,14 @@ useEffect(() => {
           </div>
           <button className="run-btn" onClick={handleSubmit} disabled={loading}>
             {loading ? (
-  <span className="dots">
-    analyzing<span style={{ '--i': 0 } as React.CSSProperties}>.</span>
-    <span style={{ '--i': 1 } as React.CSSProperties}>.</span>
-    <span style={{ '--i': 2 } as React.CSSProperties}>.</span>
-  </span>
-) : (
-  <>▶ run review</>
-)}
+              <span className="dots">
+                analyzing<span style={{ '--i': 0 } as React.CSSProperties}>.</span>
+                <span style={{ '--i': 1 } as React.CSSProperties}>.</span>
+                <span style={{ '--i': 2 } as React.CSSProperties}>.</span>
+              </span>
+            ) : (
+              <>▶ run review</>
+            )}
           </button>
           {error && <div className="error-line">✕ {error}</div>}
           {feedback && (
