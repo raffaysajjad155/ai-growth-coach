@@ -55,17 +55,22 @@ Code:
 Respond with ONLY the JSON object, nothing else."""
 
 
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
 def call_ollama(prompt: str) -> str:
     response = requests.post(
-        "http://localhost:11434/api/generate",
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+            "Content-Type": "application/json"
+        },
         json={
-            "model": "gemma2:2b",
-            "prompt": prompt,
-            "format": "json",
-            "stream": False
+            "model": "llama-3.1-8b-instant",
+            "messages": [{"role": "user", "content": prompt}],
+            "response_format": {"type": "json_object"}
         }
     )
-    return response.json()["response"]
+    return response.json()["choices"][0]["message"]["content"]
 
 
 def clean_json_text(raw: str) -> str:

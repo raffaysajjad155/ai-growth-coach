@@ -5,7 +5,7 @@ import './App.css';
 import { supabase } from './supabaseClient';
 import AuthScreen from './AuthScreen';
 
-const API_BASE =  'http://localhost:8000';
+const API_BASE = 'https://ai-growth-coach.onrender.com';
 
 interface FeedbackData {
   what_is_wrong: string;
